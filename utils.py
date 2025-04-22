@@ -7,6 +7,7 @@ from pathlib import Path
 def rms_norm(
     tensor: torch.Tensor, weight: torch.Tensor, norm_eps: float
 ) -> torch.Tensor:
+    weight = weight.to(tensor.device) # Ensure weight is on the same device as tensor
     return (
         tensor
         * torch.rsqrt(tensor.pow(2).mean(dim=-1, keepdim=True) + norm_eps)

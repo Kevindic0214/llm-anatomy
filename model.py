@@ -41,9 +41,12 @@ class LlamaModel:
         assert self.model is not None
         embedding_layer = torch.nn.Embedding(
             self.config["vocab_size"], self.config["dim"]
-        )
+        ).to(self.device) # . to(self.device) is important for GPU compatibility
+        
         embedding_layer.weight.data.copy_(self.model["tok_embeddings.weight"])
-        tokens = torch.tensor(prompt_tokens)
+        
+        tokens = torch.tensor(prompt_tokens, device=self.device) # . to(self.device) is important for GPU compatibility
+        
         token_embeddings = embedding_layer(tokens).to(torch.bfloat16)
         print(token_embeddings.shape)
         return token_embeddings
@@ -131,7 +134,7 @@ class LlamaModel:
         )
 
         # Create frequencies for RoPE - calculate per pair position
-        zero_to_one = torch.tensor(range(64)) / 64  # 64 pairs for 128-dim vector
+        zero_to_one = torch.tensor(range(64), device=self.device) / 64  # 64 pairs for 128-dim vector
         freqs = 1.0 / (self.config["rope_theta"] ** zero_to_one)
 
         # Create position-specific rotation matrices
@@ -213,3 +216,12 @@ class LlamaModel:
         )
 
         return final_embedding
+    
+    def to(self, device):
+        self.device = device  # Store the device for later use
+        for k in self.model:
+            if isinstance(self.model[k], torch.Tensor):
+                self.model[k] = self.model[k].to(device)
+        if isinstance(self.config.get("rope_theta"), torch.Tensor):
+            self.config["rope_theta"] = self.config["rope_theta"].to(device)
+        return self

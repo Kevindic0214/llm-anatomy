@@ -4,8 +4,13 @@ import utils
 
 
 def main():
+    # Load the model and tokenizer, and set the device
+    # Check if GPU is available and set the device accordingly
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+    
     tokenizer = utils.init_tokenizer("model/tokenizer.model")
-    model = LlamaModel("model")
+    model = LlamaModel("model").to(device)
     assert model.model is not None
 
     # The famous question from Hitchhiker's Guide to the Galaxy
@@ -19,15 +24,18 @@ def main():
 
     print(f"Tokens: {tokens}")
     print(f"Decoded tokens: {[tokenizer.decode([token]) for token in tokens]}")
+    
+    # Move tokens to the same device as the model
+    token_tensor = torch.tensor(tokens, dtype=torch.long, device=device)
 
     # Generate embeddings
-    embeddings = model.generate(tokens)
+    embeddings = model.generate(token_tensor)
 
     # Get the last token's embedding
     last_token_embedding = embeddings[-1]
 
     # Project to vocabulary space
-    logits = torch.matmul(last_token_embedding, model.model["output.weight"].T)
+    logits = torch.matmul(last_token_embedding, model.model["output.weight"].T.to(device)) # . to(device) is important for GPU compatibility
 
     # Apply temperature scaling
     logits = logits / 1.0  # You can adjust temperature here
