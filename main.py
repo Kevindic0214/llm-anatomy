@@ -13,12 +13,10 @@ def main():
     model = LlamaModel("model").to(device)
     assert model.model is not None
 
-    # The famous question from Hitchhiker's Guide to the Galaxy
     prompt = (
         "the answer to the ultimate question of life, the universe, and everything is "
     )
 
-    # Tokenize the prompt - make sure we're using the same format as in correct.py
     tokens = tokenizer.encode(prompt)
     tokens = [model.bos_token] + tokens
 
@@ -28,19 +26,11 @@ def main():
     # Move tokens to the same device as the model
     token_tensor = torch.tensor(tokens, dtype=torch.long, device=device)
 
-    # Generate embeddings
-    embeddings = model.generate(token_tensor)
-
-    # Get the last token's embedding
+    embeddings = model.generate(tokens)
     last_token_embedding = embeddings[-1]
-
-    # Project to vocabulary space
-    logits = torch.matmul(last_token_embedding, model.model["output.weight"].T.to(device)) # . to(device) is important for GPU compatibility
-
-    # Apply temperature scaling
+    logits = torch.matmul(last_token_embedding, model.model["output.weight"].T)
     logits = logits / 1.0  # You can adjust temperature here
 
-    # Get the most likely next token
     next_token = torch.argmax(logits)
     next_token_id = int(next_token.item())
     next_token_text = tokenizer.decode([next_token_id])
@@ -49,7 +39,6 @@ def main():
     print(f"Model's continuation: {next_token_text}")
     print(f"Next token ID: {next_token_id}")
 
-    # Print top 5 most likely tokens for debugging
     top_k = 5
     top_logits, top_indices = torch.topk(logits, top_k)
     print("\nTop 5 predictions:")
